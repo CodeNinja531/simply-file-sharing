@@ -18,7 +18,7 @@
     const dir = document.getElementById('dirPath').value.trim().replace(/^\/+|\/+$/g, '');
     if (dir) {
       // Redirects to /directory-name/ with a trailing slash to trigger auto-index
-      window.location.href = '/' + encodeURIComponent(dir).replace(/%2F/g, '/') + '/';
+      window.location.href = '/' + encodeURIComponent(dir).replace(g, '/') + '/';
     }
   });
 </script>
