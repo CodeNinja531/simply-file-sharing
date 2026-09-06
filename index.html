@@ -1,24 +1,69 @@
-<form id="directoryAccessForm" style="display: flex; flex-direction: column; gap: 10px; max-width: 400px;">
-  <label for="dirPath">Enter Directory Path:</label>
+<form id="deepDirForm" style="display: flex; flex-direction: column; gap: 10px; max-width: 400px;">
+  <label for="subDirInput">Enter Subfolder to Navigate Deeper:</label>
   <input 
     type="text" 
-    id="dirPath" 
-    placeholder="e.g., reports/2026" 
+    id="subDirInput" 
+    placeholder="e.g., subfolder or documents/2026" 
     required 
-    style="padding: 8px 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;"
+    style="padding: 8px 12px; font-size: 16px;" 
   />
-  <button type="submit" style="padding: 10px; font-size: 16px; cursor: pointer;">
-    Open Directory
-  </button>
+  <button type="submit" style="padding: 10px; font-size: 16px;">Navigate Deeper</button>
 </form>
 
+<div id="fileListContainer" style="margin-top: 20px;"></div>
+
 <script>
-  document.getElementById('directoryAccessForm').addEventListener('submit', function(e) {
+  // Tracks current nested directory relative to site root
+  let currentBasePath = window.location.pathname.replace(/\/+$/, '');
+
+  document.getElementById('deepDirForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const dir = document.getElementById('dirPath').value.trim().replace(/^\/+|\/+$/g, '');
-    if (dir) {
-      // Redirects to /directory-name/ with a trailing slash to trigger auto-index
-      window.location.href = '/' + encodeURIComponent(dir).replace(g, '/') + '/';
+    const inputField = document.getElementById('subDirInput');
+    const container = document.getElementById('fileListContainer');
+    
+    // Clean input slashes
+    const subPath = inputField.value.trim().replace(/^\/+|\/+$/g, '');
+    
+    if (subPath) {
+      // Append entered folder to current directory path
+      currentBasePath = `${currentBasePath}/${subPath}`;
+      inputField.value = ''; // Reset input field
+      
+      await loadDirectory(currentBasePath, container);
     }
   });
+
+  async function loadDirectory(path, container) {
+    container.innerHTML = `<p>Loading files in <code>${path}/</code>...</p>`;
+
+    try {
+      // Fetch index manifest relative to current nested path
+      const response = await fetch(`${path}/files.json`);
+      if (!response.ok) throw new Error('Directory or manifest not found.');
+
+      const files = await response.json(); // Expected: ["file1.png", "subfolder2/"]
+
+      let html = `<h3>Current Directory: <code>${path}/</code></h3><ul>`;
+      files.forEach(item => {
+        const itemPath = `${path}/${item}`;
+        const isFolder = item.endsWith('/');
+        
+        if (isFolder) {
+          html += `<li>📁 <b><a href="#" onclick="navigateTo('${itemPath}'); return false;">${item}</a></b></li>`;
+        } else {
+          html += `<li>📄 <a href="${itemPath}" target="_blank">${item}</a></li>`;
+        }
+      });
+      html += '</ul>';
+      container.innerHTML = html;
+    } catch (err) {
+      container.innerHTML = `<p style="color: red;">Error: ${err.message}</p>`;
+    }
+  }
+
+  // Helper function for interactive folder clicks inside the rendered list
+  async function navigateTo(targetPath) {
+    currentBasePath = targetPath.replace(/\/+$/, '');
+    await loadDirectory(currentBasePath, document.getElementById('fileListContainer'));
+  }
 </script>
